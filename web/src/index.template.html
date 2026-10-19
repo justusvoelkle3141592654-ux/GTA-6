@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Velmar – Hafenstadt</title>
+<style>
+  :root { --panel: rgba(16,20,26,.78); --text: #f2f2ee; --muted: #b9bec6; --accent: #f2c14e; --danger: #e5534b; --ok: #6fc28a; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #111; color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; user-select: none; -webkit-user-select: none; }
+  #c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  .hidden { display: none !important; }
+  .panel { background: var(--panel); border-radius: 6px; padding: 8px 12px; }
+
+  #hud { position: fixed; inset: 0; pointer-events: none; }
+  #mission { position: absolute; left: 12px; top: 12px; max-width: min(420px, 60vw); }
+  #mTitle { font-size: 12px; color: var(--accent); text-transform: uppercase; letter-spacing: .08em; }
+  #mText { font-size: 15px; margin-top: 2px; }
+  #mTimer { font-size: 20px; font-weight: 700; margin-top: 4px; }
+  #stats { position: absolute; right: 12px; top: 12px; text-align: right; min-width: 150px; }
+  #money { font-size: 22px; font-weight: 700; color: var(--ok); }
+  #stars { font-size: 24px; letter-spacing: 2px; color: #555; }
+  #stars .on { color: var(--accent); }
+  #stars.search .on { animation: blink .6s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: .45; } }
+  #lawText { font-size: 12px; color: var(--muted); min-height: 14px; }
+  .bar { height: 8px; background: rgba(255,255,255,.15); border-radius: 4px; margin-top: 5px; overflow: hidden; }
+  .bar > div { height: 100%; background: var(--ok); width: 100%; }
+  #carBar > div { background: #7aa7e0; }
+  .barLabel { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  #minimap { position: absolute; left: 12px; bottom: 12px; width: 190px; height: 190px; border-radius: 50%;
+    border: 3px solid rgba(0,0,0,.55); background: #333; }
+  #speed { position: absolute; right: 16px; bottom: 14px; font-size: 34px; font-weight: 700; text-align: right; text-shadow: 0 2px 4px #000; }
+  #speed small { font-size: 13px; font-weight: 400; display: block; color: var(--muted); }
+  #hint { position: absolute; left: 50%; bottom: 120px; transform: translateX(-50%); font-size: 15px; }
+  #dialog { position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%); width: min(640px, 86vw);
+    font-size: 16px; line-height: 1.4; text-align: center; }
+  #toast { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); font-size: 14px; }
+  #banner { position: absolute; left: 0; right: 0; top: 34%; text-align: center; text-shadow: 0 3px 8px #000; }
+  #banner .big { font-size: clamp(30px, 6vw, 56px); font-weight: 800; letter-spacing: .04em; }
+  #banner .small { font-size: 18px; margin-top: 6px; }
+  #arrest { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); width: 240px; text-align: center; font-size: 14px; }
+  #arrest .bar > div { background: var(--danger); }
+  #debug { position: absolute; right: 12px; top: 140px; font: 12px monospace; white-space: pre; }
+
+  #menu { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: rgba(8,10,14,.55); }
+  #menuBox { width: min(420px, 92vw); max-height: 92vh; overflow: auto; padding: 22px; }
+  #menuBox h1 { margin: 0; font-size: 46px; letter-spacing: .12em; }
+  #menuBox h2 { margin: 0 0 14px; font-size: 22px; }
+  #menuBox .sub { color: var(--muted); margin: 2px 0 20px; }
+  #menuBox button { display: block; width: 100%; margin: 8px 0; padding: 12px 14px; font-size: 16px; text-align: left;
+    color: var(--text); background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); border-radius: 5px; cursor: pointer; }
+  #menuBox button:hover, #menuBox button:focus { background: rgba(242,193,78,.22); outline: none; }
+  #menuBox button.sel { border-color: var(--accent); }
+  #menuBox .row { display: flex; gap: 8px; }
+  #menuBox .row button { text-align: center; }
+  #menuBox table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  #menuBox td { padding: 4px 2px; border-bottom: 1px solid rgba(255,255,255,.08); vertical-align: top; }
+  #menuBox td:first-child { color: var(--accent); white-space: nowrap; padding-right: 10px; }
+  #menuBox label { display: block; margin: 12px 0 4px; color: var(--muted); }
+  #menuBox input[type=range] { width: 100%; }
+  #menuBox .msg { color: var(--accent); min-height: 20px; margin-top: 8px; }
+
+  body.touchmode #minimap { bottom: auto; top: 110px; width: 120px; height: 120px; }
+  body.touchmode #speed { bottom: 220px; }
+  body.touchmode #dialog { bottom: 8px; width: calc(100vw - 380px); min-width: 220px; font-size: 13px; }
+  #touch { position: fixed; inset: 0; pointer-events: none; }
+  #touch .tb { position: absolute; pointer-events: auto; width: 64px; height: 64px; border-radius: 50%;
+    background: rgba(255,255,255,.16); border: 2px solid rgba(255,255,255,.3); color: #fff; font-size: 22px;
+    display: flex; align-items: center; justify-content: center; touch-action: none; }
+  #touch .tb.small { width: 50px; height: 50px; font-size: 14px; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="hud" class="hidden">
+  <div id="mission" class="panel"><div id="mTitle"></div><div id="mText"></div><div id="mTimer"></div></div>
+  <div id="stats" class="panel">
+    <div id="money">$ 0</div>
+    <div id="stars"><span>★</span><span>★</span><span>★</span></div>
+    <div id="lawText"></div>
+    <div class="barLabel">Gesundheit</div><div class="bar" id="hpBar"><div></div></div>
+    <div id="carWrap"><div class="barLabel" id="carName">Fahrzeug</div><div class="bar" id="carBar"><div></div></div></div>
+  </div>
+  <canvas id="minimap" width="190" height="190"></canvas>
+  <div id="speed"></div>
+  <div id="hint" class="panel hidden"></div>
+  <div id="dialog" class="panel hidden"></div>
+  <div id="toast" class="panel hidden"></div>
+  <div id="banner" class="hidden"><div class="big"></div><div class="small"></div></div>
+  <div id="arrest" class="panel hidden">Festnahme …<div class="bar"><div></div></div></div>
+  <div id="debug" class="panel hidden"></div>
+</div>
+
+<div id="touch" class="hidden">
+  <div class="tb" data-k="TouchLeft" style="left:16px;bottom:90px">◀</div>
+  <div class="tb" data-k="TouchRight" style="left:92px;bottom:90px">▶</div>
+  <div class="tb" data-k="TouchUp" style="right:16px;bottom:150px">▲</div>
+  <div class="tb" data-k="TouchDown" style="right:16px;bottom:76px">▼</div>
+  <div class="tb small" data-k="TouchBrake" style="right:92px;bottom:84px">HB</div>
+  <div class="tb small" data-k="TouchEnter" style="right:92px;bottom:150px">Ein/<br>Aus</div>
+  <div class="tb small" data-k="TouchPause" style="right:16px;top:150px">II</div>
+</div>
+
+<div id="menu"><div id="menuBox" class="panel"></div></div>
+
+<script>/*THREE_JS*/</script>
+<script>/*GAME_JS*/</script>
+</body>
+</html>
